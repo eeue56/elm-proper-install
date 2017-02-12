@@ -2,6 +2,7 @@
 
 const path = require('path');
 const fs = require('fs');
+const fsExtra = require('fs-extra');
 const yargs = require('yargs');
 const simpleGit = require('simple-git')();
 const compareSemver = require('compare-semver');
@@ -35,7 +36,7 @@ const gitUrl = (url) => {
 const clonePackage = (url) => {
 	return new Promise(function(resolve, reject){
 		const name = packageName(url);
-		const packageDir = path.join(process.cwd(), "elm-stuff/packages/", name);
+		const packageDir = path.join(process.cwd(), "elm-stuff/packages/", name, "/.cloned");
 		if (!fs.existsSync(packageDir)) simpleGit.clone(url, packageDir);
 
 		simpleGit
@@ -97,38 +98,23 @@ const findMatchingVersion = (versionGap, tags) => {
 	return foundTag;
 };
 
+function getUserHome() {
+  return process.env[(process.platform == 'win32') ? 'USERPROFILE' : 'HOME'];
+}
 
-const main = () => {
-	var elmPackage = null;
-	try { 
-		elmPackage = require('./elm-package.json');
-	} catch (e){
-		console.error('No elm-package.json found in the current dir!');
-		console.log('Maybe you need to run elm-package install --yes first?');
-		return;
-	}
-
-	var packages = yargv._;
+const main = (elmPackage, packages) => {
 	var promises = [];
 	var exactDependencies = {};
 
-	if (packages.length === 0){
-		if (yargv.v) console.log('Installing all packages..'); 
-
-		Object.keys(elmPackage["dependencies"]).map(function(name){
-			promises.push(clonePackage(gitUrl(name)));
-		});
-	} 
-
 	packages.map(function(url){
 		if (yargv.v) console.log('Installing new package from ' + url);
-		promises.push(clonePackage(url));
+		promises.push(clonePackage(gitUrl(url)));
 	});
 
 	Promise.all(promises).then(function(tags){
 		tags.map(function(tagObj) {
 			const packageName = tagObj.package;
-			const packageDir = path.join("elm-stuff/packages/", packageName);
+			const packageDir = path.join("elm-stuff/packages/", packageName, "/.cloned");
 			const tags = tagObj.tags;
 
 			var packageString = elmPackage["dependencies"][packageName];
@@ -148,18 +134,55 @@ const main = () => {
 				console.log(`Checking out ${packageName} at ${version}`);
 			}
 
+			const versionedDir = path.join(packageDir, '../', version);
+
 			simpleGit
 				.cwd(packageDir)
-				.checkout(version);
+				.checkout(version)
+				.then(function(){
+					fsExtra.copySync(packageDir, versionedDir);
+
+					var currentElmPackage = require(path.join(process.cwd(), versionedDir, "elm-package.json"));
+					var elmMajorVersion = currentElmPackage["elm-version"].split(" ")[0];
+					elmMajorVersion = elmMajorVersion.substr(0, elmMajorVersion.lastIndexOf('.'));
+					elmMajorVersion += '.0';
+
+					const packageLocation = path.join(getUserHome(), "/.elm/", elmMajorVersion, "package" , packageName, version, 'elm-package.json');
+
+					fsExtra.ensureFileSync(packageLocation);
+					fs.writeFileSync(packageLocation, JSON.stringify(currentElmPackage, null, 4));
+				});
+
 
 			exactDependencies[packageName] = version;
+			
 		});
 
-		fs.writeFileSync('./elm-package.json', JSON.stringify(elmPackage, null, 4));
-		fs.writeFileSync('./elm-stuff/exact-dependencies.json', JSON.stringify(exactDependencies, null, 4));
+		fs.writeFileSync(path.join(process.cwd(), './elm-package.json'), JSON.stringify(elmPackage, null, 4));
+		fs.writeFileSync(path.join(process.cwd(), './elm-stuff/exact-dependencies.json'), JSON.stringify(exactDependencies, null, 4));
+
+
 	}).catch((err) => {
 		console.log(err);
 	});
 };
 
-main();
+
+
+var elmPackage = null;
+try { 
+	elmPackage = require(path.join(process.cwd(), '/elm-package.json'));
+	var packages = yargv._;
+	if (packages.length === 0){
+		if (yargv.v) console.log('Installing all packages..'); 
+
+		Object.keys(elmPackage["dependencies"]).map(function(name){
+			packages.push(name);
+		});
+	} 
+	main(elmPackage, packages);
+} catch (e){
+	console.error('No elm-package.json found in the current dir!');
+	console.log('Maybe you need to run elm-package install --yes first?');
+	console.log(e);
+}

@@ -25,6 +25,7 @@
   "homepage": "https://github.com/eeue56/elm-proper-install#readme",
   "dependencies": {
     "compare-semver": "^1.1.0",
+    "fs-extra": "^2.0.0",
     "simple-git": "^1.65.0",
     "yargs": "^6.6.0"
   }
