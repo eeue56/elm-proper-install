@@ -1,0 +1,31 @@
+{
+  "name": "elm-proper-install",
+  "version": "1.0.0",
+  "description": "Properlly install things from Github",
+  "main": "index.js",
+  "bin": {
+    "elm-proper-install": "index.js"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/eeue56/elm-proper-install.git"
+  },
+  "keywords": [
+    "elm",
+    "install"
+  ],
+  "author": "eeue56",
+  "license": "BSD-3-Clause",
+  "bugs": {
+    "url": "https://github.com/eeue56/elm-proper-install/issues"
+  },
+  "homepage": "https://github.com/eeue56/elm-proper-install#readme",
+  "dependencies": {
+    "compare-semver": "^1.1.0",
+    "simple-git": "^1.65.0",
+    "yargs": "^6.6.0"
+  }
+}
