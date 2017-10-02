@@ -1,5 +1,8 @@
 # elm-proper-install
-Properly install things from Github for Elm. This is _only_ intended for when you can't use elm-package. :fire: 
+
+This is more or less a project in a state of disrepair. 
+
+:fire: Properly install things from Github for Elm. This is _only_ intended for when you can't use elm-package. :fire: 
 ## Install
 
 ```
